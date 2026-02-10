@@ -1,64 +1,36 @@
 <!doctype html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="utf-8">
-  <title>Taxi Exam Prep</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <!-- CSS -->
+  <title>Practice Quiz</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 
 <body>
 
-<!-- NAVBAR -->
 <header class="nav">
   <div>🚕 Taxi Exam Prep</div>
   <nav>
     <a href="index.html">Home</a>
     <a href="topics.html">Topics</a>
-    <a href="glossary.html">Glossary</a>
-    <a href="flashcards.html">Flashcards</a>
-    <a href="quiz.html">Quiz</a>
     <a href="pdf.html">PDF</a>
   </nav>
 </header>
 
-<!-- HOME CONTENT -->
-<div class="container">
+<div class="container" style="text-align:left; max-width:900px; margin:auto;">
+  <h1>✅ Practice Quiz</h1>
+  <p class="small">Option select করে Submit দাও—Result দেখাবে।</p>
 
-  <h1>Taxi Exam Preparation Website</h1>
-  <p>
-    Finland Taxi Exam এর জন্য Notes, Vocabulary, Flashcards,
-    Quiz এবং Questions PDF — সব এক জায়গায়।
-  </p>
+  <div id="quizBox"></div>
 
-  <!-- CARDS -->
-  <div class="cards">
-
-    <a class="card" href="topics.html">
-      📚 Study Topics
-    </a>
-
-    <a class="card" href="glossary.html">
-      🔎 Glossary
-    </a>
-
-    <a class="card" href="flashcards.html">
-      🧠 Flashcards
-    </a>
-
-    <a class="card" href="quiz.html">
-      ✅ Practice Quiz
-    </a>
-
-    <a class="card" href="pdf.html">
-      📄 Questions PDF
-    </a>
-
+  <div style="margin-top:20px;">
+    <button class="btn" id="submitBtn">Submit</button>
+    <button class="btn secondary" id="resetBtn">Reset</button>
   </div>
 
+  <div id="resultBox" style="margin-top:20px;"></div>
 </div>
 
+<script src="assets/js/quiz.js"></script>
 </body>
 </html>
