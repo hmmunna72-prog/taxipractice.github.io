@@ -452,5 +452,594 @@ function resetPracticePool(custom = {}) {
   const filtered = (topic === "ALL") ? all : all.filter(q => (q.topic || "") === topic);
   const pool = shuffle(filtered).slice(0, Math.max(1, Math.min(size, filtered.length || size)));
 
-  state.practice.pool
+  state.practice.pool = pool;
+  state.practice.index = 0;
+  state.practice.selected = null;
+  state.practice.submitted = false;
+  state.practice.lastResult = null;
+}
+function currentPracticeQuestion() {
+  return state.practice.pool[state.practice.index] || null;
+}
+function markMistake(questionId) {
+  const p = getProgress();
+  const set = new Set(p.mistakes || []);
+  set.add(questionId);
+  p.mistakes = [...set];
+  setProgress(p);
+}
+function clearMistake(questionId) {
+  const p = getProgress();
+  p.mistakes = (p.mistakes || []).filter(id => id !== questionId);
+  setProgress(p);
+}
+function incrementPracticeDone() {
+  const p = getProgress();
+  p.practiceDone = (p.practiceDone || 0) + 1;
+  setProgress(p);
+}
+function renderPractice() {
+  setActiveNav("practice");
 
+  const params = parseQueryStringFromHash();
+  const forcedTopic = params.topic ? decodeURIComponent(params.topic) : null;
+
+  const topics = ["ALL", ...getTopics().filter(t => t !== "ALL")];
+  if (forcedTopic && topics.includes(forcedTopic) && state.practice.topic !== forcedTopic) {
+    state.practice.topic = forcedTopic;
+    resetPracticePool({ topic: forcedTopic });
+  }
+
+  const allQs = getAllQuestions();
+  if (!allQs.length) {
+    pageEl.innerHTML = `
+      <h1 class="h1">📝 Practice Questions</h1>
+      <p class="lead">No questions found in <code>data/questions.json</code>.</p>
+    `;
+    return;
+  }
+  if (!state.practice.pool.length) resetPracticePool();
+
+  const q = currentPracticeQuestion();
+  const progress = getProgress();
+  const isMistake = (progress.mistakes || []).includes(q.id);
+
+  const optionHtml = (q.options || []).map(opt => {
+    const checked = state.practice.selected === opt.id ? "checked" : "";
+    let cls = "option";
+    if (state.practice.submitted) {
+      if (opt.id === q.answer) cls += " correct";
+      else if (opt.id === state.practice.selected && opt.id !== q.answer) cls += " wrong";
+    }
+    return `
+      <label class="${cls}">
+        <input type="radio" name="opt" value="${escapeHtml(opt.id)}" ${checked} ${state.practice.submitted ? "disabled" : ""}/>
+        <div>
+          <div class="fi">${escapeHtml(opt.fi || "")}</div>
+          <div class="bn kicker">${escapeHtml(opt.bn || "")}</div>
+        </div>
+      </label>
+    `;
+  }).join("");
+
+  const idx = state.practice.index + 1;
+  const total = state.practice.pool.length;
+
+  pageEl.innerHTML = `
+    <div class="row-gap" style="justify-content:space-between;">
+      <div>
+        <h1 class="h1">📝 Practice Questions</h1>
+        <p class="lead">Topic-wise practice with instant answer + explanation.</p>
+      </div>
+      <div class="row-gap">
+        <span class="badge">Done: ${progress.practiceDone}</span>
+        <a class="btn" href="#/mistakes">❌ Mistakes (${progress.mistakes.length})</a>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="row-gap">
+        <label class="kicker">Topic</label>
+        <select id="topicSel" class="select">
+          ${topics.map(t => `<option value="${escapeHtml(t)}" ${t === state.practice.topic ? "selected" : ""}>${escapeHtml(t)}</option>`).join("")}
+        </select>
+
+        <label class="kicker">Mode</label>
+        <select id="modeSel" class="select">
+          <option value="practice" ${state.practice.mode === "practice" ? "selected" : ""}>Practice (instant)</option>
+          <option value="quiz" ${state.practice.mode === "quiz" ? "selected" : ""}>Quiz (no hint)</option>
+        </select>
+
+        <label class="kicker">Random</label>
+        <select id="sizeSel" class="select">
+          ${[10,20,30,50].map(n => `<option value="${n}" ${n === state.practice.show ? "selected" : ""}>${n} questions</option>`).join("")}
+        </select>
+
+        <button id="newSet" class="btn" type="button">🔁 New set</button>
+      </div>
+
+      <div class="row-gap">
+        <span class="badge">Question: ${idx}/${total}</span>
+        <span class="badge">${escapeHtml(q.topic || "Topic")}</span>
+        <span class="badge">${isMistake ? "❌ Marked mistake" : "✅ Not mistake"}</span>
+      </div>
+    </div>
+
+    <div class="qbox">
+      <div class="kicker mono">${escapeHtml(q.id)} • ${escapeHtml(q.type || "mcq")}</div>
+      <div class="p" style="margin-top:8px;">
+        <span class="fi">${escapeHtml(q.question_fi || "")}</span>
+        <span class="bn">${escapeHtml(q.question_bn || "")}</span>
+      </div>
+
+      <div id="opts">${optionHtml}</div>
+
+      <div class="row-gap" style="margin-top:14px; justify-content:space-between;">
+        <div class="row-gap">
+          <button id="submitBtn" class="btn primary" type="button" ${state.practice.submitted ? "disabled" : ""}>Submit</button>
+          <button id="nextBtn" class="btn" type="button" ${state.practice.submitted ? "" : "disabled"}>Next ▶</button>
+          <button id="skipBtn" class="btn" type="button" ${state.practice.submitted ? "disabled" : ""}>Skip</button>
+        </div>
+        <div class="row-gap">
+          <button id="toggleMistake" class="btn" type="button">
+            ${isMistake ? "Remove from mistakes" : "Add to mistakes"}
+          </button>
+        </div>
+      </div>
+
+      <div id="feedback"></div>
+    </div>
+  `;
+
+  document.getElementById("opts").addEventListener("change", (e) => {
+    const r = e.target.closest("input[type=radio]");
+    if (!r) return;
+    state.practice.selected = r.value;
+  });
+
+  document.getElementById("topicSel").addEventListener("change", (e) => {
+    state.practice.topic = e.target.value;
+    resetPracticePool({ topic: state.practice.topic, size: state.practice.show });
+    renderPractice();
+  });
+
+  document.getElementById("modeSel").addEventListener("change", (e) => {
+    state.practice.mode = e.target.value;
+    renderPractice();
+  });
+
+  document.getElementById("sizeSel").addEventListener("change", (e) => {
+    state.practice.show = Number(e.target.value);
+    resetPracticePool({ topic: state.practice.topic, size: state.practice.show });
+    renderPractice();
+  });
+
+  document.getElementById("newSet").addEventListener("click", () => {
+    resetPracticePool({ topic: state.practice.topic, size: state.practice.show });
+    renderPractice();
+  });
+
+  document.getElementById("toggleMistake").addEventListener("click", () => {
+    const p = getProgress();
+    const set = new Set(p.mistakes || []);
+    if (set.has(q.id)) set.delete(q.id);
+    else set.add(q.id);
+    p.mistakes = [...set];
+    setProgress(p);
+    renderPractice();
+  });
+
+  document.getElementById("submitBtn").addEventListener("click", () => {
+    if (!state.practice.selected) {
+      document.getElementById("feedback").innerHTML = `<div class="alert">⚠️ Please select an option first.</div>`;
+      return;
+    }
+
+    state.practice.submitted = true;
+    const correct = state.practice.selected === q.answer;
+    incrementPracticeDone();
+    if (!correct) markMistake(q.id);
+    else clearMistake(q.id);
+
+    const showExplain = (state.practice.mode === "practice");
+    const explainHtml = showExplain ? `
+      <div class="alert">
+        <div class="row-gap" style="justify-content:space-between;">
+          <div style="font-weight:800">${correct ? "✅ Correct" : "❌ Wrong"}</div>
+          <div class="kicker mono">Correct: ${escapeHtml(q.answer)}</div>
+        </div>
+        <div class="hr"></div>
+        <div class="split">
+          <div>
+            <div class="kicker">Explanation (FI)</div>
+            <div class="p"><span class="fi">${escapeHtml(q.explain_fi || "—")}</span></div>
+          </div>
+          <div>
+            <div class="kicker">Explanation (BN)</div>
+            <div class="p"><span class="fi">${escapeHtml(q.explain_bn || "—")}</span></div>
+          </div>
+        </div>
+      </div>
+    ` : `
+      <div class="alert">
+        <div style="font-weight:800">${correct ? "✅ Correct" : "❌ Wrong"}</div>
+        <div class="kicker">Quiz mode: explanation hidden.</div>
+      </div>
+    `;
+    document.getElementById("feedback").innerHTML = explainHtml;
+
+    renderPractice();
+  });
+
+  document.getElementById("nextBtn").addEventListener("click", () => {
+    state.practice.index = Math.min(state.practice.index + 1, state.practice.pool.length);
+    state.practice.selected = null;
+    state.practice.submitted = false;
+
+    if (state.practice.index >= state.practice.pool.length) {
+      pageEl.innerHTML = `
+        <h1 class="h1">✅ Set finished</h1>
+        <p class="lead">You completed this practice set.</p>
+        <div class="row-gap" style="margin-top:12px;">
+          <button id="again" class="btn primary" type="button">🔁 New set</button>
+          <a class="btn" href="#/mistakes">❌ Practice mistakes</a>
+          <a class="btn" href="#/home">🏠 Home</a>
+        </div>
+      `;
+      document.getElementById("again").addEventListener("click", () => {
+        resetPracticePool({ topic: state.practice.topic, size: state.practice.show });
+        renderPractice();
+      });
+      return;
+    }
+    renderPractice();
+  });
+
+  document.getElementById("skipBtn").addEventListener("click", () => {
+    state.practice.index = Math.min(state.practice.index + 1, state.practice.pool.length - 1);
+    state.practice.selected = null;
+    state.practice.submitted = false;
+    renderPractice();
+  });
+}
+
+// ===== Mistakes (Part 3) =====
+function renderMistakes() {
+  setActiveNav("");
+  const p = getProgress();
+  const all = getAllQuestions();
+  const mistakeIds = p.mistakes || [];
+  const mistakes = all.filter(q => mistakeIds.includes(q.id));
+
+  pageEl.innerHTML = `
+    <div class="row-gap" style="justify-content:space-between;">
+      <div>
+        <h1 class="h1">❌ Mistakes</h1>
+        <p class="lead">Questions you got wrong. Practice them until perfect.</p>
+      </div>
+      <div class="row-gap">
+        <span class="badge">Total: ${mistakes.length}</span>
+        <button id="clearAll" class="btn" type="button">Clear all</button>
+      </div>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="row-gap" style="margin-bottom:10px;">
+      <button id="practiceMistakes" class="btn primary" type="button" ${mistakes.length ? "" : "disabled"}>Practice mistakes now</button>
+      <a class="btn" href="#/practice">Go to Practice</a>
+    </div>
+
+    <div class="panel">
+      <div class="badge">Mistake list</div>
+      <div class="hr"></div>
+      <div class="list">
+        ${
+          mistakes.length
+            ? mistakes.map(q => `
+              <div class="item">
+                <div class="row-gap" style="justify-content:space-between;">
+                  <div style="font-weight:800">${escapeHtml(q.topic || "Topic")}</div>
+                  <div class="kicker mono">${escapeHtml(q.id)}</div>
+                </div>
+                <div class="p" style="margin-top:8px;">
+                  <span class="fi">${escapeHtml(q.question_fi || "")}</span>
+                  <span class="bn">${escapeHtml(q.question_bn || "")}</span>
+                </div>
+                <div class="row-gap" style="margin-top:10px;">
+                  <button class="btn" data-remove="${escapeHtml(q.id)}" type="button">Remove</button>
+                </div>
+              </div>
+            `).join("")
+            : `<p class="lead">No mistakes yet. Start practicing!</p>`
+        }
+      </div>
+    </div>
+  `;
+
+  document.getElementById("clearAll").addEventListener("click", () => {
+    const p2 = getProgress();
+    p2.mistakes = [];
+    setProgress(p2);
+    renderMistakes();
+  });
+
+  document.getElementById("practiceMistakes").addEventListener("click", () => {
+    state.practice.topic = "ALL";
+    state.practice.show = Math.max(10, mistakes.length);
+    state.practice.pool = shuffle(mistakes);
+    state.practice.index = 0;
+    state.practice.selected = null;
+    state.practice.submitted = false;
+    location.hash = "#/practice";
+  });
+
+  pageEl.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-remove]");
+    if (!btn) return;
+    const id = btn.getAttribute("data-remove");
+    const p2 = getProgress();
+    p2.mistakes = (p2.mistakes || []).filter(x => x !== id);
+    setProgress(p2);
+    renderMistakes();
+  });
+}
+
+// ===== EXAM (Part 4) =====
+function buildExamPool() {
+  const all = getAllQuestions();
+  const pool = shuffle(all).slice(0, Math.min(50, all.length));
+  return pool;
+}
+function saveExamState() {
+  LS.set("exam_state", state.exam);
+}
+function clearExamState() {
+  LS.set("exam_state", null);
+}
+function startExam() {
+  const pool = buildExamPool();
+  if (!pool.length) return;
+
+  const start = nowMs();
+  state.exam = {
+    active: true,
+    durationSec: 50 * 60,
+    startedAt: start,
+    endAt: start + (50 * 60 * 1000),
+    index: 0,
+    pool,
+    answers: {},
+    flagged: {},
+    submitted: false,
+    result: null,
+  };
+  saveExamState();
+}
+function stopExamTimer() {
+  if (examTimerHandle) {
+    clearInterval(examTimerHandle);
+    examTimerHandle = null;
+  }
+}
+function startExamTimerTick(updateFn) {
+  stopExamTimer();
+  examTimerHandle = setInterval(() => {
+    if (!state.exam.active || state.exam.submitted) return;
+    const left = (state.exam.endAt - nowMs()) / 1000;
+    if (left <= 0) {
+      submitExam(true);
+      return;
+    }
+    updateFn?.();
+    saveExamState();
+  }, 500);
+}
+function examTimeLeftSec() {
+  if (!state.exam.active || !state.exam.endAt) return 0;
+  return Math.max(0, Math.floor((state.exam.endAt - nowMs()) / 1000));
+}
+function currentExamQuestion() {
+  return state.exam.pool[state.exam.index] || null;
+}
+function setExamAnswer(qid, optId) {
+  state.exam.answers[qid] = optId;
+  saveExamState();
+}
+function toggleFlag(qid) {
+  state.exam.flagged[qid] = !state.exam.flagged[qid];
+  if (!state.exam.flagged[qid]) delete state.exam.flagged[qid];
+  saveExamState();
+}
+function submitExam(auto = false) {
+  if (!state.exam.active || state.exam.submitted) return;
+
+  const total = state.exam.pool.length;
+  let score = 0;
+  const correctIds = new Set();
+  const wrongIds = new Set();
+
+  for (const q of state.exam.pool) {
+    const ans = state.exam.answers[q.id];
+    if (ans && ans === q.answer) {
+      score += 1;
+      correctIds.add(q.id);
+    } else {
+      wrongIds.add(q.id);
+    }
+  }
+
+  state.exam.submitted = true;
+  state.exam.result = { score, total, correctIds: [...correctIds], wrongIds: [...wrongIds], auto };
+
+  // save history
+  const p = getProgress();
+  const timeSec = Math.min(state.exam.durationSec, Math.max(0, Math.floor((nowMs() - state.exam.startedAt) / 1000)));
+  const entry = {
+    dateISO: new Date().toISOString(),
+    score,
+    total,
+    timeSec
+  };
+  p.mockHistory = [entry, ...(p.mockHistory || [])].slice(0, 20);
+  setProgress(p);
+
+  saveExamState();
+  stopExamTimer();
+  location.hash = "#/exam-result";
+}
+function endExamAndReset() {
+  stopExamTimer();
+  state.exam = {
+    active: false,
+    durationSec: 50 * 60,
+    endAt: null,
+    startedAt: null,
+    index: 0,
+    pool: [],
+    answers: {},
+    flagged: {},
+    submitted: false,
+    result: null,
+  };
+  clearExamState();
+}
+
+// Exam start page
+function renderExamStart() {
+  setActiveNav("exam");
+  const progress = getProgress();
+  const last = progress.mockHistory?.[0];
+
+  const running = state.exam.active && !state.exam.submitted && state.exam.endAt > nowMs();
+
+  pageEl.innerHTML = `
+    <h1 class="h1">⏱️ Real Exam Mode</h1>
+    <p class="lead">
+      50 questions • 50 minutes • one question per page • flag questions • auto-submit when time ends.
+    </p>
+
+    <div class="hr"></div>
+
+    <div class="row-gap">
+      <span class="badge">Questions available: ${getAllQuestions().length}</span>
+      <span class="badge">Exam will pick: ${Math.min(50, getAllQuestions().length)}</span>
+      ${last ? `<span class="badge">Last mock: ${last.score}/${last.total}</span>` : ""}
+    </div>
+
+    <div class="row-gap" style="margin-top:14px;">
+      ${running ? `<a class="btn primary" href="#/exam-run">▶ Continue running exam</a>` : `<button id="startExamBtn" class="btn primary" type="button">▶ Start new exam</button>`}
+      <a class="btn" href="#/home">Back to Home</a>
+    </div>
+
+    <div class="alert" style="margin-top:14px;">
+      Tip: During exam, use the number dots to jump to any question quickly.
+    </div>
+  `;
+
+  if (!running) {
+    document.getElementById("startExamBtn").addEventListener("click", () => {
+      startExam();
+      location.hash = "#/exam-run";
+    });
+  }
+}
+
+// Exam run page
+function renderExamRun() {
+  setActiveNav("exam");
+
+  // if no exam running, go to start
+  if (!state.exam.active || state.exam.submitted || !state.exam.endAt || state.exam.endAt <= nowMs()) {
+    location.hash = "#/exam";
+    return;
+  }
+
+  const q = currentExamQuestion();
+  const total = state.exam.pool.length;
+  const idx = state.exam.index + 1;
+  const leftSec = examTimeLeftSec();
+
+  const timerClass = leftSec <= 60 ? "timer pill bad" : "timer";
+  const answeredCount = Object.keys(state.exam.answers || {}).length;
+  const flaggedCount = Object.keys(state.exam.flagged || {}).length;
+
+  const dotsHtml = state.exam.pool.map((qq, i) => {
+    const isCurrent = i === state.exam.index;
+    const isAnswered = !!state.exam.answers[qq.id];
+    const isFlagged = !!state.exam.flagged[qq.id];
+
+    let cls = "dot";
+    cls += isCurrent ? " current" : "";
+    cls += isAnswered ? " answered" : " unanswered";
+    cls += isFlagged ? " flagged" : "";
+
+    return `<div class="${cls}" data-jump="${i}" title="${escapeHtml(qq.id)}">${i + 1}</div>`;
+  }).join("");
+
+  const selected = state.exam.answers[q.id] || null;
+
+  const optionHtml = (q.options || []).map(opt => {
+    const checked = selected === opt.id ? "checked" : "";
+    return `
+      <label class="option">
+        <input type="radio" name="examOpt" value="${escapeHtml(opt.id)}" ${checked}/>
+        <div>
+          <div class="fi">${escapeHtml(opt.fi || "")}</div>
+          <div class="bn kicker">${escapeHtml(opt.bn || "")}</div>
+        </div>
+      </label>
+    `;
+  }).join("");
+
+  pageEl.innerHTML = `
+    <div class="row-gap" style="justify-content:space-between;">
+      <div>
+        <h1 class="h1">⏱️ Exam Running</h1>
+        <p class="lead">Question ${idx}/${total} • Answered ${answeredCount} • Flagged ${flaggedCount}</p>
+      </div>
+      <div class="${timerClass}">⏳ ${formatTime(leftSec)}</div>
+    </div>
+
+    <div class="exam-top">
+      <div class="row-gap">
+        <button id="flagBtn" class="btn ${state.exam.flagged[q.id] ? "primary" : ""}" type="button">
+          ${state.exam.flagged[q.id] ? "🚩 Flagged" : "🏳️ Flag"}
+        </button>
+        <button id="submitExam" class="btn" type="button">Submit exam</button>
+      </div>
+
+      <div class="row-gap">
+        <span class="badge">${escapeHtml(q.topic || "Topic")}</span>
+        <span class="badge mono">${escapeHtml(q.id)}</span>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:12px;">
+      <div class="badge">Navigator</div>
+      <div class="dots" id="dots">${dotsHtml}</div>
+    </div>
+
+    <div class="qbox">
+      <div class="p">
+        <span class="fi">${escapeHtml(q.question_fi || "")}</span>
+        <span class="bn">${escapeHtml(q.question_bn || "")}</span>
+      </div>
+      <div id="examOpts">${optionHtml}</div>
+
+      <div class="row-gap" style="margin-top:14px; justify-content:space-between;">
+        <div class="row-gap">
+          <button id="prevQ" class="btn" type="button" ${state.exam.index === 0 ? "disabled" : ""}>◀ Back</button>
+          <button id="nextQ" class="btn primary" type="button" ${state.exam.index === total - 1 ? "disabled" : ""}>Next ▶</button>
+        </div>
+        <div class="row-gap">
+          <button id="endExam" class="btn" type="button">End exam</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // start timer ticking (updates only timer UI)
+  startExamTimerTick(() => {
+    const el = document.querySelector(".timer, .timer.pill.bad");
+    if (el) el.t
