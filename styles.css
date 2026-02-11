@@ -1,43 +1,46 @@
 body{
   margin:0;
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-  color:#E8ECF3;
-  min-height:100vh;
-
-  /* ---- Premium Dark Background ---- */
-  background:
-
-    /* Blue glow top left */
-    radial-gradient(
-      900px 600px at 10% -10%,
-      rgba(77,163,255,.25),
-      transparent 60%
-    ),
-
-    /* Purple glow top right */
-    radial-gradient(
-      900px 600px at 90% 0%,
-      rgba(124,77,255,.22),
-      transparent 55%
-    ),
-
-    /* Bottom road glow */
-    radial-gradient(
-      1000px 400px at 50% 120%,
-      rgba(255,200,90,.12),
-      transparent 70%
-    ),
-
-    /* Main dark gradient */
-    linear-gradient(
-      180deg,
-      #070A12 0%,
-      #0A1020 40%,
-      #05070F 100%
-    );
+  font-family:Arial, Helvetica, sans-serif;
+  background:linear-gradient(135deg,#0f172a,#020617);
+  color:white;
 }
 
+/* Topbar */
 
+.topbar{
+  padding:20px;
+  text-align:center;
+  background:rgba(255,255,255,0.05);
+  backdrop-filter:blur(10px);
+}
+
+.brand-title{
+  font-size:26px;
+  font-weight:bold;
+}
+
+.brand-sub{
+  opacity:.8;
+  font-size:14px;
+}
+
+/* Menu */
+
+.menu{
+  display:flex;
+  justify-content:center;
+  gap:20px;
+  padding:12px;
+  background:rgba(255,255,255,0.05);
+}
+
+.menu a{
+  color:white;
+  text-decoration:none;
+  font-weight:600;
+}
+
+/* Main */
 
 .main{
   padding:20px;
@@ -63,34 +66,4 @@ button{
   border-radius:8px;
   background:#1e293b;
   color:white;
-}
-/* -------- SOFT RAIN -------- */
-
-body::after{
-  content:"";
-  position:fixed;
-  inset:-30%;
-  pointer-events:none;
-  z-index:0;
-
-  background-image:
-    repeating-linear-gradient(
-      115deg,
-      rgba(255,255,255,.06) 0px,
-      rgba(255,255,255,.06) 1px,
-      rgba(255,255,255,0) 3px,
-      rgba(255,255,255,0) 18px
-    );
-
-  background-size: 300px 300px;
-  opacity:.08;   /* lighter */
-  animation: rainMove 2.2s linear infinite;
-}
-
-@keyframes rainMove{
-  from{ transform: translate3d(0,0,0); }
-  to{ transform: translate3d(-300px, 300px, 0); }
-}/* Smooth background movement feel */
-body{
-  background-attachment: fixed;
 }
