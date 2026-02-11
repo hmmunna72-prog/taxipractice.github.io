@@ -3,29 +3,31 @@ body{
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
   color:var(--text);
 
-  /* --- BG: Finland tint + dark overlay + taxi image --- */
+  /* --- CLEAN BG --- */
   background:
-    /* Finland flag tint (subtle) */
+
+    /* Finland tint (very subtle now) */
     linear-gradient(90deg,
-      rgba(255,255,255,.06) 0%,
-      rgba(255,255,255,.06) 38%,
-      rgba(0,53,128,.10) 38%,
-      rgba(0,53,128,.10) 62%,
-      rgba(255,255,255,.06) 62%,
-      rgba(255,255,255,.06) 100%
+      rgba(255,255,255,.02) 0%,
+      rgba(255,255,255,.02) 40%,
+      rgba(0,53,128,.05) 40%,
+      rgba(0,53,128,.05) 60%,
+      rgba(255,255,255,.02) 60%,
+      rgba(255,255,255,.02) 100%
     ),
 
-    /* dark readability overlay */
-    linear-gradient(rgba(5,10,20,.86), rgba(5,10,20,.92)),
+    /* dark readability layer */
+    linear-gradient(rgba(5,10,20,.88), rgba(5,10,20,.94)),
 
-    /* taxi background image */
+    /* taxi bg image */
     url("./assets/bg/taxi.jpg") center / cover no-repeat fixed,
 
     /* glow */
-    radial-gradient(900px 600px at 20% -10%, rgba(77,163,255,.18), transparent 60%),
-    radial-gradient(900px 600px at 90% 0%, rgba(124,77,255,.18), transparent 55%),
+    radial-gradient(900px 600px at 20% -10%, rgba(77,163,255,.12), transparent 60%),
+    radial-gradient(900px 600px at 90% 0%, rgba(124,77,255,.12), transparent 55%),
     linear-gradient(180deg, #070A12, #0A1020);
 }
+
 
 .main{
   padding:20px;
@@ -52,23 +54,7 @@ button{
   background:#1e293b;
   color:white;
 }
-/* ---------------- Rain + Road Glow (CSS only) ---------------- */
-
-body::before{
-  content:"";
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-  z-index:0;
-
-  /* road-light glow + soft vignette */
-  background:
-    radial-gradient(900px 380px at 50% 110%, rgba(255,200,90,.10), transparent 70%),
-    radial-gradient(700px 260px at 65% 105%, rgba(120,190,255,.10), transparent 70%),
-    radial-gradient(900px 800px at 50% 50%, transparent 40%, rgba(0,0,0,.35) 100%);
-  mix-blend-mode:screen;
-  opacity:.9;
-}
+/* -------- SOFT RAIN -------- */
 
 body::after{
   content:"";
@@ -77,29 +63,21 @@ body::after{
   pointer-events:none;
   z-index:0;
 
-  /* rain streaks */
   background-image:
     repeating-linear-gradient(
       115deg,
-      rgba(255,255,255,.14) 0px,
-      rgba(255,255,255,.14) 1px,
+      rgba(255,255,255,.06) 0px,
+      rgba(255,255,255,.06) 1px,
       rgba(255,255,255,0) 3px,
-      rgba(255,255,255,0) 14px
+      rgba(255,255,255,0) 18px
     );
-  background-size: 260px 260px;
-  filter: blur(.2px);
-  opacity:.14;
-  animation: rainMove 1.2s linear infinite;
-  transform: translate3d(0,0,0);
+
+  background-size: 300px 300px;
+  opacity:.08;   /* lighter */
+  animation: rainMove 2.2s linear infinite;
 }
 
 @keyframes rainMove{
   from{ transform: translate3d(0,0,0); }
-  to{ transform: translate3d(-260px, 260px, 0); }
-}
-
-/* make sure your app content stays above effects */
-.topbar, .layout, .footer, .main, .sidebar, #page{
-  position:relative;
-  z-index:1;
+  to{ transform: translate3d(-300px, 300px, 0); }
 }
