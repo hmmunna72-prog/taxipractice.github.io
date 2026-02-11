@@ -1,31 +1,54 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Taxi Exam Preparation</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="./styles.css" />
 </head>
-
 <body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">🚕</div>
+      <div>
+        <div class="brand-title">Taxi Exam Preparation</div>
+        <div class="brand-sub">Study • Practice • Real Exam (50Q/50min)</div>
+      </div>
+    </div>
 
-<header class="top">
-  <h2>🚕 Taxi Exam Preparation</h2>
-</header>
+    <div class="top-actions">
+      <input id="globalSearch" class="search" type="search" placeholder="Search (sheet / question)..." />
+      <button id="toggleTheme" class="btn ghost" type="button">🌙</button>
+    </div>
+  </header>
 
-<div class="layout">
+  <div class="layout">
+    <aside class="sidebar">
+      <nav class="nav">
+        <a class="nav-link" href="#/home" data-route="home">🏠 Home</a>
+        <a class="nav-link" href="#/study" data-route="study">📘 Study Sheets</a>
+        <a class="nav-link" href="#/practice" data-route="practice">📝 Practice Questions</a>
+        <a class="nav-link" href="#/exam" data-route="exam">⏱️ Real Exam</a>
+        <a class="nav-link" href="#/progress" data-route="progress">📈 Progress</a>
+        <a class="nav-link" href="#/resources" data-route="resources">🔗 Resources / FAQ</a>
+      </nav>
 
-  <aside class="sidebar">
-    <a href="#/home">Home</a>
-    <a href="#/study">Study Sheets</a>
-    <a href="#/practice">Practice Questions</a>
-  </aside>
+      <div class="sidebar-footer">
+        <div class="small muted">Works offline-ish (cached by browser).</div>
+        <div class="small muted">Built for GitHub Pages.</div>
+      </div>
+    </aside>
 
-  <main>
-    <div id="page"></div>
-  </main>
+    <main class="main">
+      <div id="page" class="page"></div>
+    </main>
+  </div>
 
-</div>
+  <footer class="footer">
+    <div class="small muted">© Taxi Exam Prep</div>
+  </footer>
 
-<script src="app.js"></script>
+  <!-- IMPORTANT: defer makes sure JS runs after page loads -->
+  <script src="./app.js" defer></script>
 </body>
 </html>
