@@ -1,11 +1,6 @@
-{
-  "chapters": [
-    {
-      "id": "ch01",
-      "title": "Taxi Exam Sheet – Part 01",
-      "items": [
-        { "fi": "Vaatimukset taksinkuljettajan ajoluvan myöntämiselle", "bn": "ট্যাক্সি চালকের লাইসেন্স দেওয়ার শর্ত" }
-      ]
-    }
-  ]
-}
+[
+  {
+    "title": "Taxi Exam Sheet Part 01",
+    "image": "assets/sheets/TAXI EXAM SHEET.png"
+  }
+]
