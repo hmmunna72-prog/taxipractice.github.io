@@ -1,1 +1,24 @@
-
+{
+  "topics": [
+    "Traffic safety",
+    "Customer service",
+    "Permits & rules"
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "topic": "Traffic safety",
+      "type": "mcq",
+      "question_fi": "Alkoholia ei tule nauttia ennen ajovuoroa, koska...",
+      "question_bn": "ডিউটির আগে অ্যালকোহল খাওয়া উচিত নয়, কারণ...",
+      "options": [
+        { "id": "a", "fi": "Se parantaa keskittymistä", "bn": "এটা মনোযোগ বাড়ায়" },
+        { "id": "b", "fi": "Se aiheuttaa väsymystä ja heikentää ajokykyä", "bn": "এটা ক্লান্তি আনে ও ড্রাইভিং ক্ষমতা কমায়" },
+        { "id": "c", "fi": "Se tekee ajamisesta nopeampaa", "bn": "ড্রাইভিং দ্রুত করে" }
+      ],
+      "answer": "b",
+      "explain_bn": "অ্যালকোহল খেলে ক্লান্তি ও রিঅ্যাকশন টাইম খারাপ হয়, তাই ডিউটির আগে নিষেধ।",
+      "explain_fi": "Alkoholi heikentää ajokykyä ja lisää väsymystä."
+    }
+  ]
+}
