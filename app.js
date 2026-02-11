@@ -5,7 +5,9 @@ const searchEl = document.getElementById("globalSearch");
 const state = {
   sheets: null,
   questionsData: null,
+
   selectedChapterId: null,
+
   practice: {
     topic: "ALL",
     pool: [],
@@ -13,6 +15,15 @@ const state = {
     selected: null,
     submitted: false,
     show: 10
+  },
+
+  exam: {
+    running: false,
+    pool: [],
+    index: 0,
+    answers: {}, // {qId: "a"}
+    secondsLeft: 50 * 60,
+    timerId: null
   }
 };
 
@@ -111,46 +122,24 @@ function resetPracticePool() {
   state.practice.submitted = false;
 }
 
+/* ---------------- HOME ---------------- */
 function renderHome() {
   setActiveNav("home");
   pageEl.innerHTML = `
     <h1 class="h1">Welcome 👋</h1>
-    <p class="lead">Study sheets + practice questions.</p>
+    <p class="lead">Study sheets + practice + real exam.</p>
 
-    <div class="grid">
-      <div class="card">
-        <div class="badge">Study</div>
-        <h3>📘 Study Sheets</h3>
-        <p>Read chapters with FI + BN.</p>
-        <div class="row">
-          <span class="small muted">Chapters: ${(state.sheets?.chapters?.length || 0)}</span>
-          <a class="btn primary" href="#/study">Open</a>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="badge">Practice</div>
-        <h3>📝 Practice Questions</h3>
-        <p>MCQ practice with result.</p>
-        <div class="row">
-          <span class="small muted">Questions: ${getAllQuestions().length}</span>
-          <a class="btn primary" href="#/practice">Start</a>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="badge">Progress</div>
-        <h3>📈 Progress</h3>
-        <p>Will be added later.</p>
-        <div class="row">
-          <span class="small muted">Coming soon</span>
-          <a class="btn" href="#/progress">Open</a>
-        </div>
-      </div>
+    <div class="alert">
+      <div style="font-weight:800">Quick Start</div>
+      <div class="hr"></div>
+      <div class="muted small">1) Add questions in <b>data/questions.json</b></div>
+      <div class="muted small">2) Practice</div>
+      <div class="muted small">3) Real Exam (50Q/50min)</div>
     </div>
   `;
 }
 
+/* ---------------- STUDY ---------------- */
 function renderStudy() {
   setActiveNav("study");
   const chapters = state.sheets?.chapters || [];
@@ -203,6 +192,7 @@ function renderStudy() {
   });
 }
 
+/* ---------------- PRACTICE ---------------- */
 function renderPractice() {
   setActiveNav("practice");
   const all = getAllQuestions();
@@ -307,14 +297,13 @@ function renderPractice() {
       return;
     }
 
-    // ✅ answer না থাকলে
     if (!q.answer) {
       state.practice.submitted = true;
       document.getElementById("feedback").innerHTML = `
         <div class="alert">
           <div style="font-weight:800">ℹ️ Answer not set yet</div>
           <div class="hr"></div>
-          <div class="muted">This question is added, but the correct answer is not set yet.</div>
+          <div class="muted small">This question is added, but the correct answer is not set yet.</div>
         </div>
       `;
       renderPractice();
@@ -327,9 +316,6 @@ function renderPractice() {
     document.getElementById("feedback").innerHTML = `
       <div class="alert">
         <div style="font-weight:800">${correct ? "✅ Correct" : "❌ Wrong"}</div>
-        <div class="hr"></div>
-        <div class="small muted">${escapeHtml(q.explain_fi || "")}</div>
-        <div class="small muted">${escapeHtml(q.explain_bn || "")}</div>
       </div>
     `;
     renderPractice();
@@ -343,16 +329,181 @@ function renderPractice() {
   });
 }
 
+/* ---------------- REAL EXAM ---------------- */
+function formatTime(sec){
+  const m = String(Math.floor(sec/60)).padStart(2,"0");
+  const s = String(sec%60).padStart(2,"0");
+  return `${m}:${s}`;
+}
+
+function stopExamTimer(){
+  if(state.exam.timerId){
+    clearInterval(state.exam.timerId);
+    state.exam.timerId = null;
+  }
+}
+
+function startExam(){
+  const all = getAllQuestions();
+  if(all.length < 1){
+    alert("No questions found.");
+    return;
+  }
+  state.exam.running = true;
+  state.exam.pool = shuffle(all).slice(0, Math.min(50, all.length));
+  state.exam.index = 0;
+  state.exam.answers = {};
+  state.exam.secondsLeft = 50 * 60;
+
+  stopExamTimer();
+  state.exam.timerId = setInterval(() => {
+    state.exam.secondsLeft--;
+    if(state.exam.secondsLeft <= 0){
+      state.exam.secondsLeft = 0;
+      stopExamTimer();
+      finishExam();
+      return;
+    }
+    const t = document.getElementById("examTimer");
+    if(t) t.textContent = formatTime(state.exam.secondsLeft);
+  }, 1000);
+
+  renderExam();
+}
+
+function finishExam(){
+  stopExamTimer();
+  state.exam.running = false;
+
+  const pool = state.exam.pool;
+  let attempted = 0;
+  let correct = 0;
+
+  for(const q of pool){
+    const a = state.exam.answers[q.id];
+    if(a){
+      attempted++;
+      if(q.answer && a === q.answer) correct++;
+    }
+  }
+
+  pageEl.innerHTML = `
+    <h1 class="h1">✅ Exam Finished</h1>
+    <div class="alert">
+      <div><b>Total:</b> ${pool.length}</div>
+      <div><b>Attempted:</b> ${attempted}</div>
+      <div><b>Correct:</b> ${correct} ${attempted ? `(${Math.round((correct/attempted)*100)}%)` : ""}</div>
+      <div class="hr"></div>
+      <div class="muted small">Note: Questions with no correct answer set (answer=null) cannot be counted as correct.</div>
+    </div>
+    <div class="row-gap" style="margin-top:12px;">
+      <button class="btn primary" id="backHome">Back Home</button>
+      <button class="btn" id="startAgain">Start Again</button>
+    </div>
+  `;
+
+  document.getElementById("backHome").onclick = () => location.hash = "#/home";
+  document.getElementById("startAgain").onclick = () => startExam();
+}
+
+function renderExam(){
+  setActiveNav("exam");
+
+  const pool = state.exam.pool;
+  if(!state.exam.running){
+    pageEl.innerHTML = `
+      <h1 class="h1">⏱️ Real Exam</h1>
+      <p class="lead">50 Questions • 50 Minutes • 1 question per page</p>
+      <div class="alert">
+        <div class="muted small">Tip: Add more questions in <b>data/questions.json</b> for better exam.</div>
+      </div>
+      <div class="row-gap" style="margin-top:12px;">
+        <button class="btn primary" id="startExamBtn">Start Exam</button>
+      </div>
+    `;
+    document.getElementById("startExamBtn").onclick = startExam;
+    return;
+  }
+
+  const q = pool[state.exam.index];
+  const chosen = state.exam.answers[q.id] || "";
+
+  const optsHtml = (q.options || []).map(opt => {
+    const checked = chosen === opt.id ? "checked" : "";
+    return `
+      <label class="option">
+        <input type="radio" name="exopt" value="${escapeHtml(opt.id)}" ${checked}/>
+        <div>
+          <div style="font-weight:700">${escapeHtml(opt.fi || "")}</div>
+          <div class="muted small">${escapeHtml(opt.bn || "")}</div>
+        </div>
+      </label>
+    `;
+  }).join("");
+
+  pageEl.innerHTML = `
+    <div class="row-gap" style="justify-content:space-between;">
+      <h1 class="h1" style="margin:0;">⏱️ Real Exam</h1>
+      <div class="timer">⏳ <span id="examTimer">${formatTime(state.exam.secondsLeft)}</span></div>
+    </div>
+    <div class="row-gap" style="margin-top:10px;">
+      <span class="badge">Q: ${state.exam.index+1}/${pool.length}</span>
+      <span class="badge">${escapeHtml(q.topic || "Topic")}</span>
+    </div>
+
+    <div class="qbox">
+      <div style="font-weight:800">${escapeHtml(q.question_fi || "")}</div>
+      <div class="muted" style="margin-top:6px;">${escapeHtml(q.question_bn || "")}</div>
+
+      <div id="examOpts">${optsHtml}</div>
+
+      <div class="row-gap" style="margin-top:14px; justify-content:space-between;">
+        <button class="btn" id="prevBtn" ${state.exam.index===0 ? "disabled" : ""}>◀ Prev</button>
+        <div class="row-gap">
+          <button class="btn" id="finishBtn">Finish</button>
+          <button class="btn primary" id="nextBtn">${state.exam.index === pool.length-1 ? "Finish ▶" : "Next ▶"}</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("examOpts").addEventListener("change", (e) => {
+    const r = e.target.closest("input[type=radio]");
+    if(!r) return;
+    state.exam.answers[q.id] = r.value;
+  });
+
+  document.getElementById("prevBtn").onclick = () => {
+    if(state.exam.index>0){
+      state.exam.index--;
+      renderExam();
+    }
+  };
+
+  document.getElementById("nextBtn").onclick = () => {
+    if(state.exam.index >= pool.length-1){
+      finishExam();
+      return;
+    }
+    state.exam.index++;
+    renderExam();
+  };
+
+  document.getElementById("finishBtn").onclick = () => finishExam;
+  document.getElementById("finishBtn").onclick = () => finishExam();
+}
+
+/* ---------------- OTHER PAGES ---------------- */
 function renderProgress() {
   setActiveNav("progress");
   pageEl.innerHTML = `<h1 class="h1">📈 Progress</h1><p class="lead">Coming soon.</p>`;
 }
-
 function renderResources() {
   setActiveNav("resources");
   pageEl.innerHTML = `<h1 class="h1">🔗 Resources / FAQ</h1><p class="lead">Add links later.</p>`;
 }
 
+/* ---------------- ROUTER ---------------- */
 async function router() {
   try {
     await loadData();
@@ -367,6 +518,7 @@ async function router() {
   if (path.startsWith("/home")) return renderHome();
   if (path.startsWith("/study")) return renderStudy();
   if (path.startsWith("/practice")) return renderPractice();
+  if (path.startsWith("/exam")) return renderExam();
   if (path.startsWith("/progress")) return renderProgress();
   if (path.startsWith("/resources")) return renderResources();
 
