@@ -1,69 +1,144 @@
-body{
-  margin:0;
-  font-family:Arial, Helvetica, sans-serif;
-  background:linear-gradient(135deg,#0f172a,#020617);
-  color:white;
+const pageEl = document.getElementById("page");
+
+let sheets = [];
+let questions = [];
+
+/* ---------------- LOAD DATA ---------------- */
+
+async function loadSheets(){
+  const res = await fetch("./data/sheets.json");
+  sheets = await res.json();
 }
 
-/* Topbar */
-
-.topbar{
-  padding:20px;
-  text-align:center;
-  background:rgba(255,255,255,0.05);
-  backdrop-filter:blur(10px);
+async function loadQuestions(){
+  const res = await fetch("./data/questions.json");
+  const data = await res.json();
+  questions = data.questions || [];
 }
 
-.brand-title{
-  font-size:26px;
-  font-weight:bold;
+/* ---------------- HOME ---------------- */
+
+function renderHome(){
+  pageEl.innerHTML = `
+    <h1>Welcome 👋</h1>
+    <p>Study sheets, practice questions & real exam.</p>
+  `;
 }
 
-.brand-sub{
-  opacity:.8;
-  font-size:14px;
+/* ---------------- STUDY ---------------- */
+
+let sheetIndex = 0;
+let zoom = 1;
+
+function renderStudy(){
+
+  if(!sheets.length){
+    pageEl.innerHTML = `<h2>No sheets found</h2>`;
+    return;
+  }
+
+  const s = sheets[sheetIndex];
+
+  pageEl.innerHTML = `
+    <h1>📘 Study Sheets</h1>
+
+    <div class="controls">
+      <button onclick="prevSheet()">⬅ Prev</button>
+      <button onclick="nextSheet()">Next ➡</button>
+      <button onclick="zoomIn()">+</button>
+      <button onclick="zoomOut()">−</button>
+    </div>
+
+    <div class="viewer">
+      <img id="sheetImg" src="${s.image}">
+    </div>
+  `;
 }
 
-/* Menu */
-
-.menu{
-  display:flex;
-  justify-content:center;
-  gap:20px;
-  padding:12px;
-  background:rgba(255,255,255,0.05);
+function nextSheet(){
+  sheetIndex = (sheetIndex+1) % sheets.length;
+  renderStudy();
 }
 
-.menu a{
-  color:white;
-  text-decoration:none;
-  font-weight:600;
+function prevSheet(){
+  sheetIndex = (sheetIndex-1+sheets.length)%sheets.length;
+  renderStudy();
 }
 
-/* Main */
-
-.main{
-  padding:20px;
+function zoomIn(){
+  zoom += .1;
+  document.getElementById("sheetImg").style.transform=`scale(${zoom})`;
 }
 
-/* Study Viewer */
-
-.viewer img{
-  width:100%;
-  border-radius:12px;
+function zoomOut(){
+  zoom -= .1;
+  document.getElementById("sheetImg").style.transform=`scale(${zoom})`;
 }
 
-.controls{
-  margin:10px 0;
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
+/* ---------------- PRACTICE ---------------- */
+
+let qIndex = 0;
+
+function renderPractice(){
+
+  if(!questions.length){
+    pageEl.innerHTML=`<h2>No questions</h2>`;
+    return;
+  }
+
+  const q = questions[qIndex];
+
+  const opts = q.options.map(o=>`
+    <label>
+      <input type="radio" name="opt" value="${o.id}">
+      ${o.fi}
+    </label><br>
+  `).join("");
+
+  pageEl.innerHTML=`
+    <h1>📝 Practice Questions</h1>
+
+    <p>${q.question_fi}</p>
+
+    ${opts}
+
+    <button onclick="nextQ()">Next</button>
+  `;
 }
 
-button{
-  padding:8px 14px;
-  border:none;
-  border-radius:8px;
-  background:#1e293b;
-  color:white;
+function nextQ(){
+  qIndex=(qIndex+1)%questions.length;
+  renderPractice();
 }
+
+/* ---------------- EXAM ---------------- */
+
+function renderExam(){
+  pageEl.innerHTML=`
+    <h1>⏱️ Real Time Exam</h1>
+    <p>50 Questions / 50 Minutes</p>
+  `;
+}
+
+/* ---------------- ROUTER ---------------- */
+
+function router(){
+
+  const hash = location.hash || "#/home";
+
+  if(hash==="#/home") renderHome();
+  else if(hash==="#/study") renderStudy();
+  else if(hash==="#/practice") renderPractice();
+  else if(hash==="#/exam") renderExam();
+}
+
+window.addEventListener("hashchange",router);
+
+/* ---------------- INIT ---------------- */
+
+(async function init(){
+  await loadSheets();
+  await loadQuestions();
+  router();
+})();
+
