@@ -20,8 +20,8 @@ async function loadQuestions(){
 
 function renderHome(){
   pageEl.innerHTML = `
-    <h1>Welcome 👋</h1>
-    <p>Study sheets, practice questions & real exam.</p>
+    <h1><center>Welcome 👋</center></h1>
+    <p><center>Study sheets, practice questions & real exam.</center></p>
   `;
 }
 
